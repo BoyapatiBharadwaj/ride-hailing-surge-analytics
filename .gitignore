@@ -1,0 +1,8 @@
+.env
+data/raw/
+data/*.json
+data/*.parquet
+__pycache__/
+*.pyc
+reports/
+frontend/node_modules/

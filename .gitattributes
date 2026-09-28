@@ -1,0 +1,8 @@
+# keep LF endings for scripts so they run on Ubuntu even after a checkout on Windows
+* text=auto
+*.sh text eol=lf
+*.py text eol=lf
+Makefile text eol=lf
+*.tmdl text eol=lf
+*.parquet binary
+*.pbix binary
