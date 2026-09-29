@@ -1,0 +1,5 @@
+<?xml version="1.0"?>
+<configuration>
+  <property><name>mapreduce.framework.name</name><value>local</value></property>
+  <property><name>mapreduce.jobtracker.address</name><value>local</value></property>
+</configuration>
