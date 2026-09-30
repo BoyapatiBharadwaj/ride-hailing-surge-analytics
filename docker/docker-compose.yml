@@ -1,0 +1,487 @@
+# =====================================================================
+#  Ride-Hailing Surge Analytics - the whole local stack (Docker Compose v2)
+#  Start with ./start.sh (or: make up). `docker compose up -d` starts the services in this order:
+#    1. MySQL, Kafka x3, HDFS, Hive metastore, HBase, MailHog
+#    2. one-time setup containers: kafka-init (topics), hdfs-init (folders), hbase-init (table),
+#       seed (download NYC data + fill MySQL)
+#    3. surge-stream + raw-archiver (Spark Structured Streaming), the producers, Airflow, the Ops page
+# =====================================================================
+name: ridehail
+
+x-logging: &logging
+  driver: json-file
+  options: { max-size: "10m", max-file: "3" }
+
+x-app-env: &app-env
+  PYTHONPATH: /app
+  TZ: UTC
+  HADOOP_USER_NAME: root
+
+x-app-volumes: &app-volumes
+  - ../:/app
+  - lake:/lake
+
+x-producer: &producer
+  image: ridehail-tools:latest
+  restart: unless-stopped
+  logging: *logging
+  env_file: ../.env
+  environment: *app-env
+  volumes: *app-volumes
+  working_dir: /app
+  depends_on:
+    kafka-init: { condition: service_completed_successfully }
+    seed: { condition: service_completed_successfully }
+
+x-kafka-env: &kafka-env
+  CLUSTER_ID: "MkU3OEVBNTcwNTJENDM2Qk"
+  KAFKA_PROCESS_ROLES: "broker,controller"
+  KAFKA_CONTROLLER_QUORUM_VOTERS: "1@kafka1:9093,2@kafka2:9093,3@kafka3:9093"
+  KAFKA_LISTENERS: "PLAINTEXT://:9092,CONTROLLER://:9093"
+  KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT"
+  KAFKA_CONTROLLER_LISTENER_NAMES: "CONTROLLER"
+  KAFKA_INTER_BROKER_LISTENER_NAME: "PLAINTEXT"
+  KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: "3"
+  KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: "3"
+  KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: "2"
+  KAFKA_DEFAULT_REPLICATION_FACTOR: "3"
+  KAFKA_MIN_INSYNC_REPLICAS: "2"
+  KAFKA_NUM_PARTITIONS: "6"
+  KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+  KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: "0"
+  KAFKA_HEAP_OPTS: "-Xms384m -Xmx512m"
+
+x-kafka-healthcheck: &kafka-health
+  # small heap for the probe JVM (otherwise it inherits the broker's 384 MB) and a longer timeout for busy laptops
+  test: ["CMD-SHELL", "KAFKA_HEAP_OPTS=-Xmx64m /opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 >/dev/null 2>&1"]
+  interval: 20s
+  timeout: 30s
+  retries: 20
+  start_period: 40s
+
+services:
+  # ------------------------------------------------------------------ SOURCE
+  mysql:
+    image: mysql:8.0
+    container_name: rh-mysql
+    restart: unless-stopped
+    logging: *logging
+    command:
+      - --default-authentication-plugin=mysql_native_password
+      - --max_allowed_packet=256M
+      - --innodb-buffer-pool-size=384M
+      - --local-infile=1
+      - --skip-log-bin
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpass}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-ridehail}
+      MYSQL_USER: ${MYSQL_USER:-etl}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-etlpass}
+      TZ: UTC
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./mysql/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    ports: ["${MYSQL_HOST_PORT:-3307}:3306"]
+    mem_limit: 900m
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -uroot -p$$MYSQL_ROOT_PASSWORD --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+
+  # ------------------------------------------------------------------ KAFKA (3 brokers, KRaft)
+  kafka1:
+    image: apache/kafka:3.7.0
+    container_name: rh-kafka1
+    hostname: kafka1
+    restart: unless-stopped
+    logging: *logging
+    environment:
+      <<: *kafka-env
+      KAFKA_NODE_ID: "1"
+      KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT://kafka1:9092"
+    volumes:
+      - kafka1-data:/var/lib/kafka/data
+    mem_limit: 800m
+    healthcheck: *kafka-health
+
+  kafka2:
+    image: apache/kafka:3.7.0
+    container_name: rh-kafka2
+    hostname: kafka2
+    restart: unless-stopped
+    logging: *logging
+    environment:
+      <<: *kafka-env
+      KAFKA_NODE_ID: "2"
+      KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT://kafka2:9092"
+    volumes:
+      - kafka2-data:/var/lib/kafka/data
+    mem_limit: 800m
+    healthcheck: *kafka-health
+
+  kafka3:
+    image: apache/kafka:3.7.0
+    container_name: rh-kafka3
+    hostname: kafka3
+    restart: unless-stopped
+    logging: *logging
+    environment:
+      <<: *kafka-env
+      KAFKA_NODE_ID: "3"
+      KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT://kafka3:9092"
+    volumes:
+      - kafka3-data:/var/lib/kafka/data
+    mem_limit: 800m
+    healthcheck: *kafka-health
+
+  # ------------------------------------------------------------------ HDFS
+  namenode:
+    image: bde2020/hadoop-namenode:2.0.0-hadoop3.2.1-java8
+    container_name: rh-namenode
+    hostname: namenode
+    restart: unless-stopped
+    logging: *logging
+    env_file: ./hadoop.env
+    environment:
+      CLUSTER_NAME: ridehail
+    volumes:
+      - nn-data:/hadoop/dfs/name
+    ports: ["${NAMENODE_UI_PORT:-9870}:9870"]
+    mem_limit: 900m
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9870/ >/dev/null || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 20
+      start_period: 40s
+
+  datanode:
+    image: bde2020/hadoop-datanode:2.0.0-hadoop3.2.1-java8
+    container_name: rh-datanode
+    hostname: datanode
+    restart: unless-stopped
+    logging: *logging
+    env_file: ./hadoop.env
+    environment:
+      SERVICE_PRECONDITION: "namenode:9870"
+    volumes:
+      - dn-data:/hadoop/dfs/data
+    depends_on:
+      namenode: { condition: service_healthy }
+    mem_limit: 700m
+
+  # ------------------------------------------------------------------ HIVE
+  hive-metastore:
+    image: apache/hive:3.1.3
+    container_name: rh-hive-metastore
+    user: root
+    restart: unless-stopped
+    # The image runs `schematool -initSchema` on every start; on the 2nd start (after a reboot / docker restart)
+    # the Derby schema already exists, init fails and the container loops "Restarting (1)". Skip init when the
+    # metastore DB is already there, and clear stale Derby lock files left by an unclean shutdown.
+    entrypoint: ["bash", "-c", "rm -f /opt/hive/data/metastore_db/*.lck; if [ -d /opt/hive/data/metastore_db/seg0 ]; then export IS_RESUME=true; echo 'metastore schema exists - skipping init'; fi; exec /entrypoint.sh"]
+    logging: *logging
+    environment:
+      SERVICE_NAME: metastore
+      DB_DRIVER: derby
+      HADOOP_USER_NAME: root
+      HADOOP_HEAPSIZE: "512"
+    volumes:
+      - ./hive/hive-site-metastore.xml:/opt/hive/conf/hive-site.xml:ro
+      - hive-meta:/opt/hive/data
+    depends_on:
+      namenode: { condition: service_healthy }
+    mem_limit: 1000m
+
+  # ------------------------------------------------------------------ HBASE (standalone + Thrift :9090)
+  hbase:
+    image: harisekhon/hbase:2.1
+    container_name: rh-hbase
+    hostname: hbase
+    restart: unless-stopped
+    logging: *logging
+    volumes:
+      - hbase-data:/hbase-data
+    ports: ["${HBASE_UI_PORT:-16010}:16010"]
+    mem_limit: 1400m
+
+  # ------------------------------------------------------------------ SPARK (batch toolbox + streaming jobs)
+  spark:
+    build: { context: ./spark }
+    image: ridehail-spark:latest
+    container_name: rh-spark
+    user: root
+    restart: unless-stopped
+    logging: *logging
+    command: ["sleep", "infinity"]
+    environment: *app-env
+    volumes: *app-volumes
+    mem_limit: 2200m
+
+  surge-stream:
+    image: ridehail-spark:latest
+    container_name: rh-surge-stream
+    user: root
+    restart: unless-stopped
+    logging: *logging
+    env_file: ../.env
+    environment: *app-env
+    volumes: *app-volumes
+    command: >
+      /opt/spark/bin/spark-submit --master local[2]
+      --driver-memory ${STREAM_DRIVER_MEMORY:-1g}
+      /app/streaming/surge_stream.py
+    depends_on:
+      kafka-init: { condition: service_completed_successfully }
+      hdfs-init: { condition: service_completed_successfully }
+      hbase-init: { condition: service_completed_successfully }
+      seed: { condition: service_completed_successfully }
+    mem_limit: 2000m
+
+  raw-archiver:
+    image: ridehail-spark:latest
+    container_name: rh-raw-archiver
+    user: root
+    restart: unless-stopped
+    logging: *logging
+    env_file: ../.env
+    environment: *app-env
+    volumes: *app-volumes
+    command: >
+      /opt/spark/bin/spark-submit --master local[2]
+      --driver-memory 1g
+      /app/streaming/raw_archiver.py
+    depends_on:
+      kafka-init: { condition: service_completed_successfully }
+      hdfs-init: { condition: service_completed_successfully }
+    mem_limit: 1700m
+
+  # ------------------------------------------------------------------ SQOOP (batch import MySQL -> HDFS)
+  sqoop:
+    build: { context: ./sqoop }
+    image: ridehail-sqoop:latest
+    container_name: rh-sqoop
+    restart: unless-stopped
+    logging: *logging
+    command: ["sleep", "infinity"]
+    env_file: ../.env
+    volumes:
+      - ../ingestion/sqoop:/scripts:ro
+    depends_on:
+      mysql: { condition: service_healthy }
+      namenode: { condition: service_healthy }
+    mem_limit: 1200m
+
+  # ------------------------------------------------------------------ PYTHON TOOLBOX (seed, producers, ML, AWS, Databricks)
+  tools:
+    build: { context: ./python }
+    image: ridehail-tools:latest
+    container_name: rh-tools
+    restart: unless-stopped
+    logging: *logging
+    command: ["sleep", "infinity"]
+    env_file: ../.env
+    environment:
+      <<: *app-env
+      GIT_PYTHON_REFRESH: quiet        # no git binary in the image; silences MLflow's git probe
+    volumes: *app-volumes
+    working_dir: /app
+    mem_limit: 2000m
+
+  # ------------------------------------------------------------------ ONE-TIME SETUP (run, finish, safe to re-run)
+  kafka-init:
+    image: apache/kafka:3.7.0
+    container_name: rh-kafka-init
+    restart: "no"
+    command: ["sh", "/scripts/create_topics.sh"]
+    environment: { BOOTSTRAP: "kafka1:9092" }
+    volumes:
+      - ../ingestion/producers:/scripts:ro
+    depends_on:
+      kafka1: { condition: service_healthy }
+      kafka2: { condition: service_healthy }
+      kafka3: { condition: service_healthy }
+
+  hdfs-init:
+    image: bde2020/hadoop-namenode:2.0.0-hadoop3.2.1-java8
+    container_name: rh-hdfs-init
+    restart: "no"
+    env_file: ./hadoop.env
+    # safe mode, corrupt checkpoints, HDFS folders - see docker/hdfs-init.sh
+    command: ["bash", "/hdfs-init.sh"]
+    volumes:
+      - ./hdfs-init.sh:/hdfs-init.sh:ro
+    depends_on:
+      namenode: { condition: service_healthy }
+      datanode: { condition: service_started }
+
+  hbase-init:
+    image: ridehail-tools:latest
+    container_name: rh-hbase-init
+    restart: "no"
+    command: ["python", "-m", "streaming.hbase_table"]
+    environment: *app-env
+    volumes: *app-volumes
+    working_dir: /app
+    depends_on:
+      hbase: { condition: service_started }
+
+  seed:
+    image: ridehail-tools:latest
+    container_name: rh-seed
+    restart: "no"
+    # NYC TLC month + zone shapes + weather history, the zone grid, then MySQL (skipped when already done)
+    command: ["bash", "-c", "python -m data.download && python -m data.prepare_zones && python -m data.seed_mysql"]
+    env_file: ../.env
+    environment: *app-env
+    volumes: *app-volumes
+    working_dir: /app
+    depends_on:
+      mysql: { condition: service_healthy }
+    mem_limit: 2000m
+
+  # ------------------------------------------------------------------ PRODUCERS (Python / confluent-kafka, 24/7)
+  tlc-replay:
+    <<: *producer
+    container_name: rh-tlc-replay
+    command: ["python", "-m", "ingestion.producers.tlc_replay"]
+    mem_limit: 1500m
+
+  gps-simulator:
+    <<: *producer
+    container_name: rh-gps-simulator
+    command: ["python", "-m", "ingestion.producers.gps_simulator"]
+    mem_limit: 512m
+
+  citybikes:
+    <<: *producer
+    container_name: rh-citybikes
+    command: ["python", "-m", "ingestion.producers.citybikes"]
+    mem_limit: 256m
+
+  weather:
+    <<: *producer
+    container_name: rh-weather
+    command: ["python", "-m", "ingestion.producers.weather"]
+    mem_limit: 256m
+
+  # ------------------------------------------------------------------ AIRFLOW
+  airflow-db:
+    image: postgres:15-alpine
+    container_name: rh-airflow-db
+    restart: unless-stopped
+    logging: *logging
+    environment:
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: airflow
+      POSTGRES_DB: airflow
+    volumes:
+      - airflow-pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "airflow"]
+      interval: 10s
+      retries: 10
+    mem_limit: 300m
+
+  airflow-init:
+    build: { context: ./airflow }
+    image: ridehail-airflow:latest
+    container_name: rh-airflow-init
+    # the image entrypoint migrates the DB and creates the admin user first, then runs this:
+    # one-slot pool shared by every spark-submit task (rh-spark has a 2.2 GB memory limit)
+    command: ["bash", "-c", "airflow pools set spark 1 'one Spark job at a time (rh-spark memory limit)' && airflow version"]
+    environment: &airflow-env
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@airflow-db/airflow
+      AIRFLOW__CORE__FERNET_KEY: "ZmDfcTF7_60GrrY167zsiPd67pEvs0aGOv2oasOM1Pg="
+      AIRFLOW__WEBSERVER__SECRET_KEY: "ridehail-capstone-secret"
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+      AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: "false"
+      AIRFLOW__CORE__PARALLELISM: "4"
+      AIRFLOW__WEBSERVER__WORKERS: "1"
+      AIRFLOW__SCHEDULER__PARSING_PROCESSES: "1"
+      AIRFLOW__SMTP__SMTP_HOST: ${SMTP_HOST:-mailhog}
+      AIRFLOW__SMTP__SMTP_PORT: ${SMTP_PORT:-1025}
+      AIRFLOW__SMTP__SMTP_MAIL_FROM: ${SMTP_MAIL_FROM:-surge-analytics@ridehail.local}
+      AIRFLOW__SMTP__SMTP_STARTTLS: ${SMTP_STARTTLS:-False}
+      AIRFLOW__SMTP__SMTP_SSL: ${SMTP_SSL:-False}
+      AIRFLOW__SMTP__SMTP_USER: ${SMTP_USER:-}
+      AIRFLOW__SMTP__SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      ALERT_EMAIL: ${ALERT_EMAIL:-ops@ridehail.local}
+      REPORT_EMAIL: ${REPORT_EMAIL:-ops@ridehail.local}
+      _AIRFLOW_DB_MIGRATE: "true"
+      _AIRFLOW_WWW_USER_CREATE: "true"
+      _AIRFLOW_WWW_USER_USERNAME: ${AIRFLOW_ADMIN_USER:-admin}
+      _AIRFLOW_WWW_USER_PASSWORD: ${AIRFLOW_ADMIN_PASSWORD:-admin}
+    depends_on:
+      airflow-db: { condition: service_healthy }
+      seed: { condition: service_completed_successfully }   # no DAG may run before MySQL is completely filled
+
+  airflow-web:
+    image: ridehail-airflow:latest
+    container_name: rh-airflow-web
+    restart: unless-stopped
+    logging: *logging
+    command: webserver
+    environment: *airflow-env
+    group_add: ["${DOCKER_GID:-999}"]
+    volumes: &airflow-volumes
+      - ../orchestration/dags:/opt/airflow/dags
+      - airflow-logs:/opt/airflow/logs
+      - lake:/lake
+      - /var/run/docker.sock:/var/run/docker.sock
+    ports: ["${AIRFLOW_PORT:-8080}:8080"]
+    depends_on:
+      airflow-init: { condition: service_completed_successfully }
+    mem_limit: 1400m
+
+  airflow-scheduler:
+    image: ridehail-airflow:latest
+    container_name: rh-airflow-scheduler
+    restart: unless-stopped
+    logging: *logging
+    command: scheduler
+    environment: *airflow-env
+    group_add: ["${DOCKER_GID:-999}"]
+    volumes: *airflow-volumes
+    depends_on:
+      airflow-init: { condition: service_completed_successfully }
+    mem_limit: 1200m
+
+  # ------------------------------------------------------------------ MAIL / OPS PAGE
+  mailhog:
+    image: mailhog/mailhog:v1.0.1
+    container_name: rh-mailhog
+    restart: unless-stopped
+    logging: *logging
+    ports: ["${MAILHOG_UI_PORT:-8026}:8025"]
+    mem_limit: 100m
+
+  genai:
+    image: ridehail-tools:latest
+    container_name: rh-genai
+    restart: unless-stopped
+    logging: *logging
+    # Ops page: React dashboard + GenAI assistant (frontend/dist) and its JSON API, Python standard library server
+    command: ["python", "-m", "genai.ops_server"]
+    env_file: ../.env
+    environment: *app-env
+    volumes: *app-volumes
+    working_dir: /app
+    ports: ["${GENAI_PORT:-8501}:8501"]
+    mem_limit: 700m
+
+volumes:
+  mysql-data:
+  kafka1-data:
+  kafka2-data:
+  kafka3-data:
+  nn-data:
+  dn-data:
+  hive-meta:
+  hbase-data:
+  airflow-pg:
+  airflow-logs:
+  lake:
