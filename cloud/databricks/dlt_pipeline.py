@@ -92,3 +92,61 @@ def parse(topic: str):
             .withColumn("local_ts", F.from_utc_timestamp("event_time", NY))
             .withWatermark("event_time", "10 minutes")
             .dropDuplicatesWithinWatermark(["event_id"]))
+
+
+# ============================================================ SILVER (cleaned, typed, no duplicates)
+@dlt.table(name="silver_requests", comment="Cleaned trip requests")
+@dlt.expect_or_drop("valid_event_time", "event_time IS NOT NULL")
+@dlt.expect_or_drop("valid_pickup_zone", "zone_id BETWEEN 1 AND 263")
+@dlt.expect_or_drop("valid_dropoff_zone", "dropoff_zone_id BETWEEN 1 AND 263")
+@dlt.expect_or_drop("positive_fare", "fare > 0")
+@dlt.expect_or_drop("valid_distance", "trip_miles >= 0")
+def silver_requests():
+    return parse("trip_requests")
+
+
+@dlt.table(name="silver_pings", comment="Cleaned driver GPS pings and CityBikes readings")
+@dlt.expect_or_drop("valid_event_time", "event_time IS NOT NULL")
+@dlt.expect_or_drop("valid_gps", "lat BETWEEN 40.4 AND 41.0 AND lon BETWEEN -74.3 AND -73.6")
+@dlt.expect_or_drop("valid_status", "status IN ('available','on_trip')")
+@dlt.expect_or_drop("has_subject", "(source = 'citybikes' AND free_bikes >= 0) OR (source = 'driver' AND driver_id IS NOT NULL)")
+@dlt.expect_or_drop("mapped_zone", "zone_id > 0")
+def silver_pings():
+    return parse("driver_gps_pings")
+
+
+@dlt.table(name="silver_weather", comment="Cleaned live weather")
+@dlt.expect_or_drop("valid_event_time", "event_time IS NOT NULL")
+@dlt.expect_or_drop("valid_temperature", "temperature_2m BETWEEN -40 AND 55")
+@dlt.expect_or_drop("valid_rain", "rain >= 0")
+def silver_weather():
+    return parse("weather")
+
+
+@dlt.table(name="silver_matches", comment="Dispatch results: driver found or not, rider ETA, fare")
+@dlt.expect_or_drop("valid_event_time", "event_time IS NOT NULL")
+@dlt.expect_or_drop("has_trip", "trip_id IS NOT NULL")
+@dlt.expect_or_drop("valid_status", "status IN ('MATCHED','UNMATCHED')")
+@dlt.expect_or_drop("valid_eta", "eta_min IS NULL OR eta_min >= 0")
+def silver_matches():
+    return parse("trip_matches")
+
+
+@dlt.table(name="silver_surge", comment="Surge multipliers published by the streaming engine")
+@dlt.expect_or_drop("valid_event_time", "event_time IS NOT NULL")
+@dlt.expect_or_drop("valid_zone", "zone_id BETWEEN 1 AND 263")
+@dlt.expect_or_drop("valid_multiplier", "multiplier BETWEEN 1.0 AND 3.0")
+def silver_surge():
+    return (parse("surge_updates")
+            .withColumn("minute_ts", F.date_trunc("minute", F.from_utc_timestamp(F.col("window_end").cast("timestamp"), NY))))
+
+
+@dlt.table(name="silver_trips", comment="Cleaned historical trips")
+@dlt.expect_or_drop("non_null_zone", "pickup_zone_id IS NOT NULL AND dropoff_zone_id IS NOT NULL")
+@dlt.expect_or_drop("positive_fare", "status != 'COMPLETED' OR fare > 0")
+@dlt.expect_or_drop("pickup_after_request", "status != 'COMPLETED' OR pickup_time >= request_time")
+@dlt.expect_or_drop("dropoff_after_pickup", "status != 'COMPLETED' OR dropoff_time >= pickup_time")
+def silver_trips():
+    return (dlt.read("bronze_trips").dropDuplicates(["trip_id"])
+            .withColumn("wait_min", (F.unix_timestamp("pickup_time") - F.unix_timestamp("request_time")) / 60.0)
+            .withColumn("hour_ts", F.date_trunc("hour", "request_time")))
