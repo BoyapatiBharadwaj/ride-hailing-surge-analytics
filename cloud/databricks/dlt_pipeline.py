@@ -150,3 +150,97 @@ def silver_trips():
     return (dlt.read("bronze_trips").dropDuplicates(["trip_id"])
             .withColumn("wait_min", (F.unix_timestamp("pickup_time") - F.unix_timestamp("request_time")) / 60.0)
             .withColumn("hour_ts", F.date_trunc("hour", "request_time")))
+
+
+# ============================================================ GOLD (business tables)
+@dlt.table(name="zone_minute_surge", comment="Surge multiplier, demand and supply per zone and minute")
+def zone_minute_surge():
+    w = Window.partitionBy("zone_id", "minute_ts").orderBy(F.col("event_time").desc())
+    return (dlt.read("silver_surge").withColumn("_rn", F.row_number().over(w)).where("_rn = 1")
+            .select("zone_id", "minute_ts", "demand", "supply", "ratio", "multiplier", "rain_mm", "temp_c",
+                    F.col("local_ts").alias("updated_at"), "decayed"))
+
+
+@dlt.table(name="zone_hourly_kpis", comment="Hourly KPIs per zone: history (MySQL trips) + live (stream)")
+def zone_hourly_kpis():
+    done = F.col("status") == "COMPLETED"
+    hist = (dlt.read("silver_trips").groupBy(F.col("pickup_zone_id").alias("zone_id"), "hour_ts").agg(
+        F.count("*").alias("requests"), F.sum(F.when(done, 1).otherwise(0)).alias("completed_trips"),
+        F.sum(F.when(~done, 1).otherwise(0)).alias("cancelled_trips"), F.avg(F.when(done, F.col("wait_min"))).alias("avg_eta_min"),
+        F.sum(F.when(done, F.col("fare")).otherwise(0.0)).alias("revenue"),
+        F.sum(F.when(done, F.col("distance_km")).otherwise(0.0)).alias("distance_km"),
+        F.avg("surge_multiplier").alias("avg_surge"), F.lit(None).cast("double").alias("avg_supply"))
+        .withColumn("source", F.lit("history")))
+    req = (dlt.read("silver_requests").groupBy("zone_id", F.date_trunc("hour", "local_ts").alias("hour_ts"))
+           .agg(F.count("*").alias("requests")))
+    mm = (dlt.read("silver_matches").groupBy(F.col("pickup_zone_id").alias("zone_id"), F.date_trunc("hour", "local_ts").alias("hour_ts"))
+          .agg(F.sum(F.when(F.col("status") == "MATCHED", 1).otherwise(0)).alias("completed_trips"),
+               F.sum(F.when(F.col("status") == "UNMATCHED", 1).otherwise(0)).alias("cancelled_trips"),
+               F.avg("eta_min").alias("avg_eta_min"), F.sum(F.coalesce("fare", F.lit(0.0))).alias("revenue"),
+               F.sum(F.when(F.col("status") == "MATCHED", F.col("distance_km")).otherwise(0.0)).alias("distance_km")))
+    sg = (dlt.read("zone_minute_surge").groupBy("zone_id", F.date_trunc("hour", "minute_ts").alias("hour_ts"))
+          .agg(F.avg("multiplier").alias("avg_surge"), F.avg("supply").alias("avg_supply")))
+    live = (req.join(mm, ["zone_id", "hour_ts"], "left").join(sg, ["zone_id", "hour_ts"], "left")
+            .withColumn("source", F.lit("live")))
+    longs = ("requests", "completed_trips", "cancelled_trips")
+    doubles = ("avg_eta_min", "revenue", "distance_km", "avg_surge", "avg_supply")
+    cols = ["zone_id", "hour_ts", "source", *longs, *doubles]
+
+    def cast(df):
+        return df.select(*[F.col(c).cast("long") if c in longs else F.col(c).cast("double") if c in doubles
+                           else F.col(c) for c in cols])
+    return cast(hist).unionByName(cast(live))
+
+
+@dlt.table(name="driver_daily_utilisation", comment="Per driver and day: online time, time on trips, trips, revenue")
+def driver_daily_utilisation():
+    ping_sec = 22.5                                    # pings arrive every 15-30 s
+    p = (dlt.read("silver_pings").where("source = 'driver'").groupBy("driver_id", F.to_date("local_ts").alias("date"))
+         .agg(F.count("*").alias("pings"), F.sum(F.when(F.col("status") == "on_trip", 1).otherwise(0)).alias("on_trip_pings"))
+         .withColumn("online_min", F.round(F.col("pings") * ping_sec / 60.0, 2))
+         .withColumn("on_trip_min", F.round(F.col("on_trip_pings") * ping_sec / 60.0, 2))
+         .withColumn("utilisation", F.round(F.col("on_trip_pings") / F.col("pings"), 4)))
+    m = (dlt.read("silver_matches").where("status = 'MATCHED'").groupBy("driver_id", F.to_date("local_ts").alias("date"))
+         .agg(F.count("*").alias("trips"), F.round(F.sum("fare"), 2).alias("revenue"),
+              F.sum(F.when(F.col("surge_multiplier") >= 1.5, 1).otherwise(0)).alias("surge_trips")))
+    return (p.join(m, ["driver_id", "date"], "left").fillna({"trips": 0, "revenue": 0.0, "surge_trips": 0})
+             .select("driver_id", "date", "pings", "on_trip_pings", "online_min", "on_trip_min", "utilisation",
+                     F.col("trips").cast("long"), F.col("revenue").cast("double"), F.col("surge_trips").cast("long")))
+
+
+@dlt.table(name="zone_daily_utilisation", comment="Driver utilisation per zone and day")
+def zone_daily_utilisation():
+    return (dlt.read("silver_pings").where("source = 'driver'").groupBy("zone_id", F.to_date("local_ts").alias("date"))
+            .agg(F.count("*").alias("pings"), F.sum(F.when(F.col("status") == "on_trip", 1).otherwise(0)).alias("on_trip_pings"))
+            .withColumn("utilisation", F.round(F.col("on_trip_pings") / F.col("pings"), 4)))
+
+
+@dlt.table(name="revenue_per_km", comment="Revenue per km by zone, hour of day and weather")
+def revenue_per_km():
+    def bucket(rain, temp):
+        return F.when(rain >= 0.5, "rain").when(temp < 5, "cold").when(temp > 30, "hot").otherwise("clear")
+    h = (dlt.read("silver_trips").where("status = 'COMPLETED' AND distance_km > 0")
+         .groupBy(F.col("pickup_zone_id").alias("zone_id"), F.hour("request_time").alias("hour_of_day"))
+         .agg(F.count("*").alias("trips"), F.sum("fare").alias("revenue"), F.sum("distance_km").alias("distance_km"))
+         .withColumn("weather_bucket", F.lit("unknown")).withColumn("source", F.lit("history")))
+    w = (dlt.read("silver_weather").groupBy(F.date_trunc("hour", "local_ts").alias("hour_ts"))
+         .agg(F.avg("rain").alias("hour_rain_mm"), F.avg("temperature_2m").alias("hour_temp_c")))
+    m = (dlt.read("silver_matches").where("status = 'MATCHED' AND distance_km > 0")
+         .withColumn("hour_ts", F.date_trunc("hour", "local_ts")).join(w, "hour_ts", "left")
+         .withColumn("weather_bucket", F.coalesce(bucket(F.col("hour_rain_mm"), F.col("hour_temp_c")), F.lit("unknown")))
+         .groupBy(F.col("pickup_zone_id").alias("zone_id"), F.hour("local_ts").alias("hour_of_day"), "weather_bucket")
+         .agg(F.count("*").alias("trips"), F.sum("fare").alias("revenue"), F.sum("distance_km").alias("distance_km"))
+         .withColumn("source", F.lit("live")))
+    cols = ["zone_id", "hour_of_day", "weather_bucket", "source", "trips", "revenue", "distance_km"]
+    return (h.select(*cols).unionByName(m.select(*cols))
+            .withColumn("revenue_per_km", F.round(F.col("revenue") / F.col("distance_km"), 4))
+            .withColumn("trips", F.col("trips").cast("long")))
+
+
+@dlt.table(name="reconciliation_check", comment="Gold must reconcile with Silver: live requests counted once")
+@dlt.expect("gold_matches_silver", "reconciled = true")
+def reconciliation_check():
+    silver = dlt.read("silver_requests").agg(F.count("*").alias("silver_requests"))
+    gold = dlt.read("zone_hourly_kpis").where("source = 'live'").agg(F.coalesce(F.sum("requests"), F.lit(0)).alias("gold_requests"))
+    return (silver.crossJoin(gold).withColumn("reconciled", F.col("silver_requests") == F.col("gold_requests"))
+            .withColumn("checked_at", F.current_timestamp()))
