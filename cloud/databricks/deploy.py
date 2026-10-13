@@ -133,3 +133,116 @@ def upload_history() -> int:
         n += upload_folder(local, f"{VOLUME}/{remote}", "")
         print(f"[dbx] {remote}: snapshot uploaded")
     return n
+
+
+# ------------------------------------------------------------------ run
+def run(full_refresh: bool = False) -> None:
+    w = client()
+    pid = find_pipeline() or setup()
+    for _ in range(30):                     # another DAG may be running the pipeline right now: wait for it
+        try:
+            upd = w.pipelines.start_update(pipeline_id=pid, full_refresh=full_refresh)
+            break
+        except Exception as exc:  # noqa: BLE001
+            if "active update" not in str(exc).lower() and "already" not in str(exc).lower():
+                raise
+            print("[dbx] the pipeline is already running - waiting 60 s")
+            time.sleep(60)
+    else:
+        sys.exit(1)
+    print(f"[dbx] pipeline update {upd.update_id} started (full refresh: {full_refresh})")
+    deadline, state = time.time() + 45 * 60, "QUEUED"
+    while time.time() < deadline:
+        state = str(w.pipelines.get_update(pipeline_id=pid, update_id=upd.update_id).update.state).split(".")[-1]
+        if state in ("COMPLETED", "FAILED", "CANCELED"):
+            break
+        time.sleep(20)
+    print(f"[dbx] pipeline update {upd.update_id}: {state}")
+    if state != "COMPLETED":
+        print(f"[dbx] open Databricks > Jobs & Pipelines > {PIPELINE} to see the error")
+        sys.exit(1)
+    print(f"[dbx] Bronze / Silver / Gold tables are in {CATALOG}.{SCHEMA}")
+
+
+# ------------------------------------------------------------------ reconcile
+def kafka_counts() -> dict:
+    """Messages currently held by Kafka per topic (end offset - earliest offset, all partitions)."""
+    from confluent_kafka import Consumer, TopicPartition
+    c = Consumer({"bootstrap.servers": KAFKA_BOOTSTRAP, "group.id": "reconcile", "enable.auto.commit": False})
+    out = {}
+    for t in ARCHIVED_TOPICS:
+        parts = c.list_topics(t, timeout=10).topics[t].partitions
+        out[t] = sum(hi - lo for lo, hi in (c.get_watermark_offsets(TopicPartition(t, p), timeout=10) for p in parts))
+    c.close()
+    return out
+
+
+def reconcile() -> None:
+    """Drill 3: is every event counted once in Kafka, Bronze, Silver and Gold?"""
+    k = kafka_counts()
+    b = {r["topic"]: r["n"] for r in query(f"SELECT topic, COUNT(*) n FROM {table('bronze_events')} GROUP BY topic")}
+    print(f"{'topic':18s} {'Kafka (7-day retention)':>24s} {'Bronze':>10s}")
+    for t in ARCHIVED_TOPICS:
+        print(f"{t:18s} {k.get(t, 0):>24,} {b.get(t, 0):>10,}")
+    silver = {"trip_requests": "silver_requests", "driver_gps_pings": "silver_pings", "weather": "silver_weather",
+              "trip_matches": "silver_matches", "surge_updates": "silver_surge"}
+    print("\nBronze -> Silver (Silver = Bronze - duplicates - rows dropped by the DLT expectations)")
+    for t, s in silver.items():
+        n = query(f"SELECT COUNT(*) n FROM {table(s)}")
+        print(f"  {t:18s} bronze {b.get(t, 0):>10,}   {s:16s} {n[0]['n'] if n else 0:>10,}")
+    rc = query(f"SELECT * FROM {table('reconciliation_check')}")
+    if rc:
+        r = rc[0]
+        print(f"\nSilver -> Gold: silver_requests {r['silver_requests']:,} = Gold zone_hourly_kpis live requests "
+              f"{r['gold_requests']:,} -> {'PASS' if r['reconciled'] else 'FAIL'}")
+    print("\nKafka holds 7 days; Bronze keeps everything since the start, so Bronze >= Kafka once data is older than 7 days.")
+    print("Events from the last minutes may still be on their way (archiver every 60 s, upload every hour).")
+
+
+def reset() -> None:
+    w = client()
+    pid = find_pipeline()
+    if pid:
+        w.pipelines.delete(pipeline_id=pid)
+        print(f"[dbx] pipeline {PIPELINE} deleted")
+    try:
+        w.schemas.delete(full_name=f"{CATALOG}.{SCHEMA}", force=True)
+    except Exception as exc:  # noqa: BLE001
+        if "not found" not in str(exc).lower() and "does not exist" not in str(exc).lower():
+            raise
+    print(f"[dbx] schema {CATALOG}.{SCHEMA} dropped (tables and landing Volume)")
+    for root in (f"{LANDING}/events", f"{EXPORT}/trips_raw", f"{EXPORT}/dim_zone"):
+        for dirpath, _, files in os.walk(root):
+            if DONE in files:
+                os.remove(os.path.join(dirpath, DONE))
+    print("[dbx] local upload markers cleared - now run: make dbx")
+
+
+def main() -> None:
+    cmd = sys.argv[1] if len(sys.argv) > 1 else "all"
+    require()
+    if cmd == "setup":
+        setup()
+    elif cmd == "events":
+        if upload_events() == 0:
+            sys.exit(SKIP)             # nothing new: the hourly DAG skips the pipeline run
+    elif cmd == "history":
+        upload_history()
+    elif cmd == "run":
+        run(full_refresh="--full" in sys.argv)
+    elif cmd == "all":
+        setup()
+        upload_history()
+        upload_events()
+        run()
+    elif cmd == "reconcile":
+        reconcile()
+    elif cmd == "reset":
+        reset()
+    else:
+        print(__doc__)
+        sys.exit(2)
+
+
+if __name__ == "__main__":
+    main()
