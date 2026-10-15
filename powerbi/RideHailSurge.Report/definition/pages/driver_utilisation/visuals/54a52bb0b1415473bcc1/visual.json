@@ -1,0 +1,130 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.9.0/schema.json",
+  "name": "54a52bb0b1415473bcc1",
+  "position": {
+    "x": 640,
+    "y": 400,
+    "z": 7000,
+    "height": 300,
+    "width": 620,
+    "tabOrder": 7000
+  },
+  "visual": {
+    "visualType": "tableEx",
+    "query": {
+      "queryState": {
+        "Values": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "driver_payouts"
+                    }
+                  },
+                  "Property": "driver_id"
+                }
+              },
+              "queryRef": "driver_payouts.driver_id",
+              "nativeQueryRef": "driver_id"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "driver_payouts"
+                    }
+                  },
+                  "Property": "date"
+                }
+              },
+              "queryRef": "driver_payouts.date",
+              "nativeQueryRef": "date"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "driver_payouts"
+                    }
+                  },
+                  "Property": "trips"
+                }
+              },
+              "queryRef": "driver_payouts.trips",
+              "nativeQueryRef": "trips"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "driver_payouts"
+                    }
+                  },
+                  "Property": "utilisation"
+                }
+              },
+              "queryRef": "driver_payouts.utilisation",
+              "nativeQueryRef": "utilisation"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "driver_payouts"
+                    }
+                  },
+                  "Property": "bonus"
+                }
+              },
+              "queryRef": "driver_payouts.bonus",
+              "nativeQueryRef": "bonus"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "driver_payouts"
+                    }
+                  },
+                  "Property": "total_payout"
+                }
+              },
+              "queryRef": "driver_payouts.total_payout",
+              "nativeQueryRef": "total_payout"
+            }
+          ]
+        }
+      }
+    },
+    "drillFilterOtherVisuals": true,
+    "visualContainerObjects": {
+      "title": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Daily driver incentive payouts'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

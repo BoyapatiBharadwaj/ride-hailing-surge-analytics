@@ -1,0 +1,79 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.9.0/schema.json",
+  "name": "fde28f855c03550aa4dc",
+  "position": {
+    "x": 540,
+    "y": 230,
+    "z": 5000,
+    "height": 160,
+    "width": 720,
+    "tabOrder": 5000
+  },
+  "visual": {
+    "visualType": "clusteredColumnChart",
+    "query": {
+      "queryState": {
+        "Category": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "driver_daily_utilisation"
+                    }
+                  },
+                  "Property": "date"
+                }
+              },
+              "queryRef": "driver_daily_utilisation.date",
+              "nativeQueryRef": "date",
+              "active": true
+            }
+          ]
+        },
+        "Y": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "driver_daily_utilisation"
+                    }
+                  },
+                  "Property": "Driver Utilisation"
+                }
+              },
+              "queryRef": "driver_daily_utilisation.Driver Utilisation",
+              "nativeQueryRef": "Driver Utilisation"
+            }
+          ]
+        }
+      }
+    },
+    "drillFilterOtherVisuals": true,
+    "visualContainerObjects": {
+      "title": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Daily utilisation'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

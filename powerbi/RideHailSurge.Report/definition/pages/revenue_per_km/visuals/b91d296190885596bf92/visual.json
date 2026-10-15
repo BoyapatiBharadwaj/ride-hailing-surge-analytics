@@ -1,0 +1,79 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.9.0/schema.json",
+  "name": "b91d296190885596bf92",
+  "position": {
+    "x": 20,
+    "y": 200,
+    "z": 4000,
+    "height": 170,
+    "width": 610,
+    "tabOrder": 4000
+  },
+  "visual": {
+    "visualType": "lineChart",
+    "query": {
+      "queryState": {
+        "Category": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "revenue_per_km"
+                    }
+                  },
+                  "Property": "hour_of_day"
+                }
+              },
+              "queryRef": "revenue_per_km.hour_of_day",
+              "nativeQueryRef": "hour_of_day",
+              "active": true
+            }
+          ]
+        },
+        "Y": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "revenue_per_km"
+                    }
+                  },
+                  "Property": "Revenue per km (by weather)"
+                }
+              },
+              "queryRef": "revenue_per_km.Revenue per km (by weather)",
+              "nativeQueryRef": "Revenue per km (by weather)"
+            }
+          ]
+        }
+      }
+    },
+    "drillFilterOtherVisuals": true,
+    "visualContainerObjects": {
+      "title": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Revenue per km by hour of day'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

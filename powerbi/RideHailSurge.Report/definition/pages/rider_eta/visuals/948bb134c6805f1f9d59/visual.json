@@ -1,0 +1,60 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.9.0/schema.json",
+  "name": "948bb134c6805f1f9d59",
+  "position": {
+    "x": 640,
+    "y": 70,
+    "z": 3000,
+    "height": 120,
+    "width": 300,
+    "tabOrder": 3000
+  },
+  "visual": {
+    "visualType": "cardVisual",
+    "query": {
+      "queryState": {
+        "Data": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "zone_hourly_kpis"
+                    }
+                  },
+                  "Property": "Completed Trips"
+                }
+              },
+              "queryRef": "zone_hourly_kpis.Completed Trips",
+              "nativeQueryRef": "Completed Trips"
+            }
+          ]
+        }
+      }
+    },
+    "drillFilterOtherVisuals": true,
+    "visualContainerObjects": {
+      "title": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Completed trips'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

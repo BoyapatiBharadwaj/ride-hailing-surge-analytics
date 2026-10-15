@@ -1,0 +1,93 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.9.0/schema.json",
+  "name": "82ef18f31b2254e3a18f",
+  "position": {
+    "x": 20,
+    "y": 200,
+    "z": 5000,
+    "height": 300,
+    "width": 1240,
+    "tabOrder": 5000
+  },
+  "visual": {
+    "visualType": "lineChart",
+    "query": {
+      "queryState": {
+        "Category": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "zone_hourly_kpis"
+                    }
+                  },
+                  "Property": "hour_ts"
+                }
+              },
+              "queryRef": "zone_hourly_kpis.hour_ts",
+              "nativeQueryRef": "hour_ts",
+              "active": true
+            }
+          ]
+        },
+        "Y": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "zone_hourly_kpis"
+                    }
+                  },
+                  "Property": "Avg Rider ETA (min)"
+                }
+              },
+              "queryRef": "zone_hourly_kpis.Avg Rider ETA (min)",
+              "nativeQueryRef": "Avg Rider ETA (min)"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "zone_hourly_kpis"
+                    }
+                  },
+                  "Property": "ETA Target"
+                }
+              },
+              "queryRef": "zone_hourly_kpis.ETA Target",
+              "nativeQueryRef": "ETA Target"
+            }
+          ]
+        }
+      }
+    },
+    "drillFilterOtherVisuals": true,
+    "visualContainerObjects": {
+      "title": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Average rider ETA vs 4.5-minute target'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

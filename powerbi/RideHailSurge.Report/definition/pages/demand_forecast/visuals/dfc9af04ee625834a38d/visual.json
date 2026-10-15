@@ -1,0 +1,79 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.9.0/schema.json",
+  "name": "dfc9af04ee625834a38d",
+  "position": {
+    "x": 20,
+    "y": 470,
+    "z": 5000,
+    "height": 230,
+    "width": 1240,
+    "tabOrder": 5000
+  },
+  "visual": {
+    "visualType": "clusteredBarChart",
+    "query": {
+      "queryState": {
+        "Category": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "dim_zone"
+                    }
+                  },
+                  "Property": "Zone"
+                }
+              },
+              "queryRef": "dim_zone.Zone",
+              "nativeQueryRef": "Zone",
+              "active": true
+            }
+          ]
+        },
+        "Y": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "demand_forecast"
+                    }
+                  },
+                  "Property": "Forecast Demand"
+                }
+              },
+              "queryRef": "demand_forecast.Forecast Demand",
+              "nativeQueryRef": "Forecast Demand"
+            }
+          ]
+        }
+      }
+    },
+    "drillFilterOtherVisuals": true,
+    "visualContainerObjects": {
+      "title": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Next 30-minute demand forecast by zone'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,76 @@
+table dim_zone
+	lineageTag: dc15cad0-efef-51d9-b8dc-a5993076237e
+
+	column zone_id
+		dataType: int64
+		formatString: 0
+		lineageTag: a96812a4-1658-56aa-b4c2-657993c42c8e
+		summarizeBy: none
+		sourceColumn: zone_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column Borough
+		dataType: string
+		lineageTag: eb149eb2-f571-5eee-a2a2-04beab49d6eb
+		summarizeBy: none
+		sourceColumn: Borough
+
+		annotation SummarizationSetBy = Automatic
+
+	column Zone
+		dataType: string
+		lineageTag: 08e15cb9-2f24-5040-b244-5b358566ea55
+		summarizeBy: none
+		sourceColumn: Zone
+
+		annotation SummarizationSetBy = Automatic
+
+	column service_zone
+		dataType: string
+		lineageTag: 98fa229b-d2b9-5bf7-8d71-879781cef2a7
+		summarizeBy: none
+		sourceColumn: service_zone
+
+		annotation SummarizationSetBy = Automatic
+
+	column centroid_lat
+		dataType: double
+		formatString: 0.000000
+		dataCategory: Latitude
+		lineageTag: 2dcba068-9a54-5cc6-a528-951bfef0b3b0
+		summarizeBy: none
+		sourceColumn: centroid_lat
+
+		annotation SummarizationSetBy = Automatic
+
+	column centroid_lon
+		dataType: double
+		formatString: 0.000000
+		dataCategory: Longitude
+		lineageTag: b10e41e4-c4c7-5965-86e9-8bcf9125ca7d
+		summarizeBy: none
+		sourceColumn: centroid_lon
+
+		annotation SummarizationSetBy = Automatic
+
+	column MapLocation = dim_zone[Zone] & ", " & dim_zone[Borough] & ", New York, NY"
+		dataType: string
+		lineageTag: 1dff1a20-38e6-5bc8-a094-32af76eae98b
+		dataCategory: Place
+		summarizeBy: none
+
+		annotation SummarizationSetBy = Automatic
+
+	partition dim_zone = m
+		mode: import
+		source =
+				let
+				    Source =
+				        Databricks.Catalogs(DatabricksHost, DatabricksHttpPath, [Catalog=null, Database=null, EnableAutomaticProxyDiscovery=null]){[Name=DatabricksCatalog, Kind="Database"]}[Data]{[Name=DatabricksSchema, Kind="Schema"]}[Data]{[Name="dim_zone", Kind="Table"]}[Data],
+				    Selected = Table.SelectColumns(Source, {"zone_id", "Borough", "Zone", "service_zone", "centroid_lat", "centroid_lon"}, MissingField.UseNull),
+				    Typed = Table.TransformColumnTypes(Selected, {{"zone_id", Int64.Type}, {"Borough", type text}, {"Zone", type text}, {"service_zone", type text}, {"centroid_lat", type number}, {"centroid_lon", type number}}, "en-US")
+				in
+				    Typed
+
+	annotation PBI_ResultType = Table

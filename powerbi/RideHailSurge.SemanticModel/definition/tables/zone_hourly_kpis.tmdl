@@ -1,0 +1,161 @@
+table zone_hourly_kpis
+	lineageTag: 06eb6bfa-95c1-5f25-893c-cc9d26498d69
+
+	measure 'Total Requests' = SUM ( zone_hourly_kpis[requests] )
+		formatString: #,0
+		lineageTag: 63d328b1-00dc-5396-89f3-720837e113d9
+
+	measure 'Completed Trips' = SUM ( zone_hourly_kpis[completed_trips] )
+		formatString: #,0
+		lineageTag: 3ca5353d-0a09-54c4-b57a-93e16ea7d9fc
+
+	measure 'Cancelled Trips' = SUM ( zone_hourly_kpis[cancelled_trips] )
+		formatString: #,0
+		lineageTag: a7eebb64-f78a-5b9e-848b-20d0bfebd919
+
+	measure 'Cancellation Rate' = DIVIDE ( [Cancelled Trips], [Total Requests] )
+		formatString: 0.0%
+		lineageTag: 2557627a-fff3-59c1-881d-cf2ec915b857
+
+	measure 'Total Revenue' = SUM ( zone_hourly_kpis[revenue] )
+		formatString: $#,0
+		lineageTag: 9230d2e9-a6a3-5e98-b5b9-6f09ac9e53bd
+
+	measure 'Distance km' = SUM ( zone_hourly_kpis[distance_km] )
+		formatString: #,0
+		lineageTag: 6f8e98fb-d0f3-5368-9657-ed33c7fd6d0a
+
+	measure 'Revenue per km' = DIVIDE ( [Total Revenue], [Distance km] )
+		formatString: $#,0.00
+		lineageTag: 7d17b20c-805f-5f87-a736-2aaaa7789e0d
+
+	measure 'Avg Rider ETA (min)' =
+			DIVIDE (
+			    SUMX ( zone_hourly_kpis, zone_hourly_kpis[avg_eta_min] * zone_hourly_kpis[completed_trips] ),
+			    CALCULATE ( SUM ( zone_hourly_kpis[completed_trips] ), NOT ISBLANK ( zone_hourly_kpis[avg_eta_min] ) )
+			)
+		formatString: 0.00
+		lineageTag: 8577384d-490a-577f-acf0-2fe851eb105a
+
+	measure 'ETA Target' = 4.5
+		formatString: 0.0
+		lineageTag: 1f451fe7-977a-58a5-9ed0-bc5790279812
+
+	measure 'ETA vs Target' = [Avg Rider ETA (min)] - [ETA Target]
+		formatString: +0.00;-0.00;0.00
+		lineageTag: 0981ba9f-db1d-5e3a-89fb-fc1f89f2be67
+
+	measure 'Avg Surge (hourly)' = AVERAGE ( zone_hourly_kpis[avg_surge] )
+		formatString: 0.00x
+		lineageTag: 14c50852-ce8c-5ff7-b34f-14e3ae9ff8c6
+
+	column zone_id
+		dataType: int64
+		formatString: 0
+		lineageTag: 8e1aa382-fe30-5ee9-8436-c88d972e8d3f
+		summarizeBy: none
+		sourceColumn: zone_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column hour_ts
+		dataType: dateTime
+		formatString: General Date
+		lineageTag: 35ced897-250b-5aa6-8ea3-97900197cdb9
+		summarizeBy: none
+		sourceColumn: hour_ts
+
+		annotation SummarizationSetBy = Automatic
+
+	column source
+		dataType: string
+		lineageTag: b4477f59-a19c-56d5-8be8-0e9cda769027
+		summarizeBy: none
+		sourceColumn: source
+
+		annotation SummarizationSetBy = Automatic
+
+	column requests
+		dataType: int64
+		formatString: 0
+		lineageTag: 4157a8a7-006f-52e8-9058-ca54b0482e2a
+		summarizeBy: sum
+		sourceColumn: requests
+
+		annotation SummarizationSetBy = Automatic
+
+	column completed_trips
+		dataType: int64
+		formatString: 0
+		lineageTag: 91f39465-17ae-5cba-a40f-e80686cf3c43
+		summarizeBy: sum
+		sourceColumn: completed_trips
+
+		annotation SummarizationSetBy = Automatic
+
+	column cancelled_trips
+		dataType: int64
+		formatString: 0
+		lineageTag: 72b2386a-e123-5e78-9d11-e58eccf8d8bf
+		summarizeBy: sum
+		sourceColumn: cancelled_trips
+
+		annotation SummarizationSetBy = Automatic
+
+	column avg_eta_min
+		dataType: double
+		formatString: #,0.00
+		lineageTag: 8c8fdf7c-ea19-51b8-9169-eca096c3ef64
+		summarizeBy: sum
+		sourceColumn: avg_eta_min
+
+		annotation SummarizationSetBy = Automatic
+
+	column revenue
+		dataType: double
+		formatString: #,0.00
+		lineageTag: f7c789b3-559b-5a45-ae99-20bc0c2c2729
+		summarizeBy: sum
+		sourceColumn: revenue
+
+		annotation SummarizationSetBy = Automatic
+
+	column distance_km
+		dataType: double
+		formatString: #,0.00
+		lineageTag: 63d53cc9-b5dd-577c-8c41-f40bb1d84e9c
+		summarizeBy: sum
+		sourceColumn: distance_km
+
+		annotation SummarizationSetBy = Automatic
+
+	column avg_surge
+		dataType: double
+		formatString: #,0.00
+		lineageTag: 1b261993-a2d8-512c-8024-5dd68618650e
+		summarizeBy: sum
+		sourceColumn: avg_surge
+
+		annotation SummarizationSetBy = Automatic
+
+	column avg_supply
+		dataType: double
+		formatString: #,0.00
+		lineageTag: 1d040fa0-e64b-516e-b7f3-d5a6b1784b8b
+		summarizeBy: sum
+		sourceColumn: avg_supply
+
+		annotation SummarizationSetBy = Automatic
+
+	partition zone_hourly_kpis = m
+		mode: import
+		source =
+				let
+				    Source =
+				        Databricks.Catalogs(DatabricksHost, DatabricksHttpPath, [Catalog=null, Database=null, EnableAutomaticProxyDiscovery=null]){[Name=DatabricksCatalog, Kind="Database"]}[Data]{[Name=DatabricksSchema, Kind="Schema"]}[Data]{[Name="zone_hourly_kpis", Kind="Table"]}[Data],
+				    Selected = Table.SelectColumns(Source, {"zone_id", "hour_ts", "source", "requests", "completed_trips", "cancelled_trips", "avg_eta_min", "revenue", "distance_km", "avg_surge", "avg_supply"}, MissingField.UseNull),
+				    Typed = Table.TransformColumnTypes(Selected, {{"zone_id", Int64.Type}, {"hour_ts", type datetime}, {"source", type text}, {"requests", Int64.Type}, {"completed_trips", Int64.Type}, {"cancelled_trips", Int64.Type}, {"avg_eta_min", type number}, {"revenue", type number}, {"distance_km", type number}, {"avg_surge", type number}, {"avg_supply", type number}}, "en-US")
+				in
+				    Typed
+
+	annotation PBI_ResultType = Table

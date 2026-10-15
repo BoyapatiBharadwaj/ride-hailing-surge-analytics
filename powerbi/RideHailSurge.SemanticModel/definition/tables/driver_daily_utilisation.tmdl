@@ -1,0 +1,121 @@
+table driver_daily_utilisation
+	lineageTag: f976a253-6266-5f6d-b262-88d08424b582
+
+	measure 'Driver Utilisation' = DIVIDE ( SUM ( driver_daily_utilisation[on_trip_pings] ), SUM ( driver_daily_utilisation[pings] ) )
+		formatString: 0.0%
+		lineageTag: 7ddde855-c898-53c8-8b02-8293d7669c0f
+
+	measure 'Utilisation Target' = 0.78
+		formatString: 0%
+		lineageTag: 7696c9c7-463f-505a-9139-accb5e035b0d
+
+	measure 'Utilisation vs Target' = [Driver Utilisation] - [Utilisation Target]
+		formatString: +0.0%;-0.0%;0.0%
+		lineageTag: a136d2a6-87a7-5712-96d6-a2466690bee3
+
+	measure 'Active Drivers' = DISTINCTCOUNT ( driver_daily_utilisation[driver_id] )
+		formatString: #,0
+		lineageTag: c0b33180-b5f2-51be-ab8d-f7b594684c95
+
+	column driver_id
+		dataType: int64
+		formatString: 0
+		lineageTag: b62f4837-d939-574e-8026-e525263e4c4c
+		summarizeBy: none
+		sourceColumn: driver_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column date
+		dataType: dateTime
+		formatString: General Date
+		lineageTag: b5395c94-714c-5bc2-91cc-c767e73b6a83
+		summarizeBy: none
+		sourceColumn: date
+
+		annotation SummarizationSetBy = Automatic
+
+	column pings
+		dataType: int64
+		formatString: 0
+		lineageTag: 5aaff115-cab4-570b-9212-d81c93ec3bfd
+		summarizeBy: sum
+		sourceColumn: pings
+
+		annotation SummarizationSetBy = Automatic
+
+	column on_trip_pings
+		dataType: int64
+		formatString: 0
+		lineageTag: d40ad666-043b-52dd-9c6e-8e29648d9b0a
+		summarizeBy: sum
+		sourceColumn: on_trip_pings
+
+		annotation SummarizationSetBy = Automatic
+
+	column online_min
+		dataType: double
+		formatString: #,0.00
+		lineageTag: 8ece9879-2817-5097-88bc-e681a05ecd28
+		summarizeBy: sum
+		sourceColumn: online_min
+
+		annotation SummarizationSetBy = Automatic
+
+	column on_trip_min
+		dataType: double
+		formatString: #,0.00
+		lineageTag: 4ebb5571-f26d-52fa-ba06-cde4604081ae
+		summarizeBy: sum
+		sourceColumn: on_trip_min
+
+		annotation SummarizationSetBy = Automatic
+
+	column utilisation
+		dataType: double
+		formatString: #,0.00
+		lineageTag: cc007a23-8b30-5525-9a5f-4ff6d41c8b74
+		summarizeBy: sum
+		sourceColumn: utilisation
+
+		annotation SummarizationSetBy = Automatic
+
+	column trips
+		dataType: int64
+		formatString: 0
+		lineageTag: 574507cc-08b2-5f9f-b8c2-ab30e0b8e7c8
+		summarizeBy: sum
+		sourceColumn: trips
+
+		annotation SummarizationSetBy = Automatic
+
+	column revenue
+		dataType: double
+		formatString: #,0.00
+		lineageTag: 0ab529aa-0ca3-5c6a-b74a-166276dd2b9b
+		summarizeBy: sum
+		sourceColumn: revenue
+
+		annotation SummarizationSetBy = Automatic
+
+	column surge_trips
+		dataType: int64
+		formatString: 0
+		lineageTag: b076d2a6-4c91-54e3-94a0-199909248981
+		summarizeBy: sum
+		sourceColumn: surge_trips
+
+		annotation SummarizationSetBy = Automatic
+
+	partition driver_daily_utilisation = m
+		mode: import
+		source =
+				let
+				    Source =
+				        Databricks.Catalogs(DatabricksHost, DatabricksHttpPath, [Catalog=null, Database=null, EnableAutomaticProxyDiscovery=null]){[Name=DatabricksCatalog, Kind="Database"]}[Data]{[Name=DatabricksSchema, Kind="Schema"]}[Data]{[Name="driver_daily_utilisation", Kind="Table"]}[Data],
+				    Selected = Table.SelectColumns(Source, {"driver_id", "date", "pings", "on_trip_pings", "online_min", "on_trip_min", "utilisation", "trips", "revenue", "surge_trips"}, MissingField.UseNull),
+				    Typed = Table.TransformColumnTypes(Selected, {{"driver_id", Int64.Type}, {"date", type datetime}, {"pings", Int64.Type}, {"on_trip_pings", Int64.Type}, {"online_min", type number}, {"on_trip_min", type number}, {"utilisation", type number}, {"trips", Int64.Type}, {"revenue", type number}, {"surge_trips", Int64.Type}}, "en-US")
+				in
+				    Typed
+
+	annotation PBI_ResultType = Table

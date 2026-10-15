@@ -1,0 +1,60 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.9.0/schema.json",
+  "name": "f0f06502d9685973bda4",
+  "position": {
+    "x": 1020,
+    "y": 70,
+    "z": 4000,
+    "height": 150,
+    "width": 240,
+    "tabOrder": 4000
+  },
+  "visual": {
+    "visualType": "cardVisual",
+    "query": {
+      "queryState": {
+        "Data": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "driver_payouts"
+                    }
+                  },
+                  "Property": "Drivers with Bonus"
+                }
+              },
+              "queryRef": "driver_payouts.Drivers with Bonus",
+              "nativeQueryRef": "Drivers with Bonus"
+            }
+          ]
+        }
+      }
+    },
+    "drillFilterOtherVisuals": true,
+    "visualContainerObjects": {
+      "title": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Drivers with bonus'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

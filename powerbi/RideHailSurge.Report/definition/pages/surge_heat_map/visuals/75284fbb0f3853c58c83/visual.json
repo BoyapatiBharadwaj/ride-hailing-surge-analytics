@@ -1,0 +1,133 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.9.0/schema.json",
+  "name": "75284fbb0f3853c58c83",
+  "position": {
+    "x": 20,
+    "y": 70,
+    "z": 1000,
+    "height": 630,
+    "width": 760,
+    "tabOrder": 1000
+  },
+  "visual": {
+    "visualType": "azureMap",
+    "query": {
+      "queryState": {
+        "Category": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "dim_zone"
+                    }
+                  },
+                  "Property": "MapLocation"
+                }
+              },
+              "queryRef": "dim_zone.MapLocation",
+              "nativeQueryRef": "MapLocation",
+              "active": true
+            }
+          ]
+        },
+        "Y": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "dim_zone"
+                    }
+                  },
+                  "Property": "centroid_lat"
+                }
+              },
+              "queryRef": "dim_zone.centroid_lat",
+              "nativeQueryRef": "centroid_lat"
+            }
+          ]
+        },
+        "X": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "dim_zone"
+                    }
+                  },
+                  "Property": "centroid_lon"
+                }
+              },
+              "queryRef": "dim_zone.centroid_lon",
+              "nativeQueryRef": "centroid_lon"
+            }
+          ]
+        },
+        "Size": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "zone_minute_surge"
+                    }
+                  },
+                  "Property": "Current Surge"
+                }
+              },
+              "queryRef": "zone_minute_surge.Current Surge",
+              "nativeQueryRef": "Current Surge"
+            }
+          ]
+        },
+        "Tooltips": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "zone_minute_surge"
+                    }
+                  },
+                  "Property": "Current Demand/Supply Ratio"
+                }
+              },
+              "queryRef": "zone_minute_surge.Current Demand/Supply Ratio",
+              "nativeQueryRef": "Current Demand/Supply Ratio"
+            }
+          ]
+        }
+      }
+    },
+    "drillFilterOtherVisuals": true,
+    "visualContainerObjects": {
+      "title": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Current surge multiplier by taxi zone'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

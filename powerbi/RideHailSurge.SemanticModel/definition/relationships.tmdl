@@ -1,0 +1,19 @@
+relationship ab9e4705-045f-5a0b-8136-f99f11bcff59
+	fromColumn: zone_minute_surge.zone_id
+	toColumn: dim_zone.zone_id
+
+relationship 4a2cc15f-3f91-528d-b1a6-b0c41c1fc39b
+	fromColumn: zone_hourly_kpis.zone_id
+	toColumn: dim_zone.zone_id
+
+relationship a330568e-6f64-5f65-a21a-57d2abf70392
+	fromColumn: zone_daily_utilisation.zone_id
+	toColumn: dim_zone.zone_id
+
+relationship a179902d-654b-55b5-b778-acd910330376
+	fromColumn: revenue_per_km.zone_id
+	toColumn: dim_zone.zone_id
+
+relationship 0cb240c1-9241-5615-a090-8cff38ee9560
+	fromColumn: demand_forecast.zone_id
+	toColumn: dim_zone.zone_id

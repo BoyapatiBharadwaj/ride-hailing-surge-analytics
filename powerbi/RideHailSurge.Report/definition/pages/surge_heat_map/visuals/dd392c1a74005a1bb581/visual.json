@@ -1,0 +1,79 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.9.0/schema.json",
+  "name": "dd392c1a74005a1bb581",
+  "position": {
+    "x": 800,
+    "y": 290,
+    "z": 5000,
+    "height": 330,
+    "width": 460,
+    "tabOrder": 5000
+  },
+  "visual": {
+    "visualType": "clusteredBarChart",
+    "query": {
+      "queryState": {
+        "Category": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "dim_zone"
+                    }
+                  },
+                  "Property": "Zone"
+                }
+              },
+              "queryRef": "dim_zone.Zone",
+              "nativeQueryRef": "Zone",
+              "active": true
+            }
+          ]
+        },
+        "Y": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "zone_minute_surge"
+                    }
+                  },
+                  "Property": "Current Surge"
+                }
+              },
+              "queryRef": "zone_minute_surge.Current Surge",
+              "nativeQueryRef": "Current Surge"
+            }
+          ]
+        }
+      }
+    },
+    "drillFilterOtherVisuals": true,
+    "visualContainerObjects": {
+      "title": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Top zones by current surge'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

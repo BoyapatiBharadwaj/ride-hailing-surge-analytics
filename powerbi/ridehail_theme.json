@@ -1,0 +1,18 @@
+{
+  "name": "RideHail Surge",
+  "dataColors": ["#1F6FB2", "#F28E2B", "#2CA58D", "#E15759", "#8E6BBF", "#76B7B2", "#EDC948", "#9C755F"],
+  "background": "#FFFFFF",
+  "foreground": "#1E2A3A",
+  "tableAccent": "#1F6FB2",
+  "good": "#2CA58D",
+  "neutral": "#EDC948",
+  "bad": "#E15759",
+  "maximum": "#B2182B",
+  "center": "#FDDBC7",
+  "minimum": "#F7F7F7",
+  "textClasses": {
+    "title": {"fontFace": "Segoe UI Semibold", "fontSize": 13, "color": "#1E2A3A"},
+    "callout": {"fontFace": "Segoe UI", "fontSize": 28, "color": "#1F6FB2"},
+    "label": {"fontFace": "Segoe UI", "fontSize": 10, "color": "#3B4A5C"}
+  }
+}
