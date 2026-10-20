@@ -1,0 +1,60 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.9.0/schema.json",
+  "name": "914f2d7daf7d5c4397ef",
+  "position": {
+    "x": 780,
+    "y": 70,
+    "z": 3000,
+    "height": 150,
+    "width": 230,
+    "tabOrder": 3000
+  },
+  "visual": {
+    "visualType": "cardVisual",
+    "query": {
+      "queryState": {
+        "Data": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "driver_payouts"
+                    }
+                  },
+                  "Property": "Total Payout"
+                }
+              },
+              "queryRef": "driver_payouts.Total Payout",
+              "nativeQueryRef": "Total Payout"
+            }
+          ]
+        }
+      }
+    },
+    "drillFilterOtherVisuals": true,
+    "visualContainerObjects": {
+      "title": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Incentive payout'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

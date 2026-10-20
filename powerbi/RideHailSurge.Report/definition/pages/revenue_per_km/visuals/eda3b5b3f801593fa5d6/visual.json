@@ -1,0 +1,79 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.9.0/schema.json",
+  "name": "eda3b5b3f801593fa5d6",
+  "position": {
+    "x": 640,
+    "y": 70,
+    "z": 3000,
+    "height": 300,
+    "width": 620,
+    "tabOrder": 3000
+  },
+  "visual": {
+    "visualType": "clusteredColumnChart",
+    "query": {
+      "queryState": {
+        "Category": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "revenue_per_km"
+                    }
+                  },
+                  "Property": "weather_bucket"
+                }
+              },
+              "queryRef": "revenue_per_km.weather_bucket",
+              "nativeQueryRef": "weather_bucket",
+              "active": true
+            }
+          ]
+        },
+        "Y": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "revenue_per_km"
+                    }
+                  },
+                  "Property": "Revenue per km (by weather)"
+                }
+              },
+              "queryRef": "revenue_per_km.Revenue per km (by weather)",
+              "nativeQueryRef": "Revenue per km (by weather)"
+            }
+          ]
+        }
+      }
+    },
+    "drillFilterOtherVisuals": true,
+    "visualContainerObjects": {
+      "title": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Revenue per km by weather'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

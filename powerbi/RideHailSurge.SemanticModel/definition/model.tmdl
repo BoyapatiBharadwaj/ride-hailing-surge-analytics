@@ -1,0 +1,19 @@
+model Model
+	culture: en-US
+	defaultPowerBIDataSourceVersion: powerBI_V3
+	sourceQueryCulture: en-US
+	dataAccessOptions
+		legacyRedirects
+		returnErrorValuesAsNull
+
+	annotation PBI_QueryOrder = ["DatabricksHost", "DatabricksHttpPath", "DatabricksCatalog", "DatabricksSchema", "zone_minute_surge", "zone_hourly_kpis", "driver_daily_utilisation", "zone_daily_utilisation", "revenue_per_km", "demand_forecast", "driver_payouts", "dim_zone"]
+
+ref table zone_minute_surge
+ref table zone_hourly_kpis
+ref table driver_daily_utilisation
+ref table zone_daily_utilisation
+ref table revenue_per_km
+ref table demand_forecast
+ref table driver_payouts
+ref table dim_zone
+

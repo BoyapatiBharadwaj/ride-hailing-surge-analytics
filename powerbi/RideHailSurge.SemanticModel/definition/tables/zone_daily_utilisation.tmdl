@@ -1,0 +1,64 @@
+table zone_daily_utilisation
+	lineageTag: f8867df2-fa71-55b4-983e-1c49b0a7abea
+
+	measure 'Zone Utilisation' = DIVIDE ( SUM ( zone_daily_utilisation[on_trip_pings] ), SUM ( zone_daily_utilisation[pings] ) )
+		formatString: 0.0%
+		lineageTag: 309c5003-7410-5308-88b0-fca800836ccb
+
+	column zone_id
+		dataType: int64
+		formatString: 0
+		lineageTag: 583306cb-09b4-567a-9ff0-5ced9a84e467
+		summarizeBy: none
+		sourceColumn: zone_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column date
+		dataType: dateTime
+		formatString: General Date
+		lineageTag: 8e26a053-7482-5f70-9f79-ecfe3752d05a
+		summarizeBy: none
+		sourceColumn: date
+
+		annotation SummarizationSetBy = Automatic
+
+	column pings
+		dataType: int64
+		formatString: 0
+		lineageTag: 222adec7-dda7-5c73-9eb3-8fcb45e406ea
+		summarizeBy: sum
+		sourceColumn: pings
+
+		annotation SummarizationSetBy = Automatic
+
+	column on_trip_pings
+		dataType: int64
+		formatString: 0
+		lineageTag: 749f3158-8273-59a4-aab5-b772951f106d
+		summarizeBy: sum
+		sourceColumn: on_trip_pings
+
+		annotation SummarizationSetBy = Automatic
+
+	column utilisation
+		dataType: double
+		formatString: #,0.00
+		lineageTag: d8ea36e5-6030-5fac-a57f-343aa3a83c54
+		summarizeBy: sum
+		sourceColumn: utilisation
+
+		annotation SummarizationSetBy = Automatic
+
+	partition zone_daily_utilisation = m
+		mode: import
+		source =
+				let
+				    Source =
+				        Databricks.Catalogs(DatabricksHost, DatabricksHttpPath, [Catalog=null, Database=null, EnableAutomaticProxyDiscovery=null]){[Name=DatabricksCatalog, Kind="Database"]}[Data]{[Name=DatabricksSchema, Kind="Schema"]}[Data]{[Name="zone_daily_utilisation", Kind="Table"]}[Data],
+				    Selected = Table.SelectColumns(Source, {"zone_id", "date", "pings", "on_trip_pings", "utilisation"}, MissingField.UseNull),
+				    Typed = Table.TransformColumnTypes(Selected, {{"zone_id", Int64.Type}, {"date", type datetime}, {"pings", Int64.Type}, {"on_trip_pings", Int64.Type}, {"utilisation", type number}}, "en-US")
+				in
+				    Typed
+
+	annotation PBI_ResultType = Table

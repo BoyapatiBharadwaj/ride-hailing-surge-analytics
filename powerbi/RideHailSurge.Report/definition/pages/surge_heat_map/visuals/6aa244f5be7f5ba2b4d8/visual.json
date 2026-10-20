@@ -1,0 +1,60 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.9.0/schema.json",
+  "name": "6aa244f5be7f5ba2b4d8",
+  "position": {
+    "x": 800,
+    "y": 190,
+    "z": 4000,
+    "height": 90,
+    "width": 460,
+    "tabOrder": 4000
+  },
+  "visual": {
+    "visualType": "cardVisual",
+    "query": {
+      "queryState": {
+        "Data": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "zone_minute_surge"
+                    }
+                  },
+                  "Property": "Last Surge Refresh"
+                }
+              },
+              "queryRef": "zone_minute_surge.Last Surge Refresh",
+              "nativeQueryRef": "Last Surge Refresh"
+            }
+          ]
+        }
+      }
+    },
+    "drillFilterOtherVisuals": true,
+    "visualContainerObjects": {
+      "title": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Last refresh (target: every 60 s)'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

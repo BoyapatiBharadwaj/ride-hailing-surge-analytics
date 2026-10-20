@@ -1,0 +1,19 @@
+expression DatabricksHost = "dbc-xxxxxxxx-xxxx.cloud.databricks.com" meta [IsParameterQuery=true, Type="Text", IsParameterQueryRequired=true]
+	lineageTag: 03140d2c-38ca-5806-bb38-68216ab37716
+
+	annotation PBI_ResultType = Text
+
+expression DatabricksHttpPath = "/sql/1.0/warehouses/xxxxxxxxxxxxxxxx" meta [IsParameterQuery=true, Type="Text", IsParameterQueryRequired=true]
+	lineageTag: 775fecbc-fdab-5416-bbee-74f9b28353bb
+
+	annotation PBI_ResultType = Text
+
+expression DatabricksCatalog = "workspace" meta [IsParameterQuery=true, Type="Text", IsParameterQueryRequired=true]
+	lineageTag: e85413d6-1408-5c68-ae70-f5d44b827721
+
+	annotation PBI_ResultType = Text
+
+expression DatabricksSchema = "ridehail" meta [IsParameterQuery=true, Type="Text", IsParameterQueryRequired=true]
+	lineageTag: 969130d1-6e66-5136-a8c4-cd6c10787651
+
+	annotation PBI_ResultType = Text

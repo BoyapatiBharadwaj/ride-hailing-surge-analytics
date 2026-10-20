@@ -1,0 +1,60 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.9.0/schema.json",
+  "name": "639935e433305a5daeb3",
+  "position": {
+    "x": 20,
+    "y": 70,
+    "z": 1000,
+    "height": 120,
+    "width": 300,
+    "tabOrder": 1000
+  },
+  "visual": {
+    "visualType": "cardVisual",
+    "query": {
+      "queryState": {
+        "Data": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "demand_forecast"
+                    }
+                  },
+                  "Property": "Forecast Error (MAE)"
+                }
+              },
+              "queryRef": "demand_forecast.Forecast Error (MAE)",
+              "nativeQueryRef": "Forecast Error (MAE)"
+            }
+          ]
+        }
+      }
+    },
+    "drillFilterOtherVisuals": true,
+    "visualContainerObjects": {
+      "title": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Holdout MAE (requests / 30 min)'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

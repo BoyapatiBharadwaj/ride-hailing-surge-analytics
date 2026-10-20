@@ -1,0 +1,11 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/gitIntegration/platformProperties/2.0.0/schema.json",
+  "metadata": {
+    "type": "Report",
+    "displayName": "RideHailSurge"
+  },
+  "config": {
+    "version": "2.0",
+    "logicalId": "2b80ca3a-9409-58c3-9fe4-9b780b966513"
+  }
+}

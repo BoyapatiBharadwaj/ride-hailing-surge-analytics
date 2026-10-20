@@ -1,0 +1,11 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/pagesMetadata/1.1.0/schema.json",
+  "pageOrder": [
+    "surge_heat_map",
+    "rider_eta",
+    "driver_utilisation",
+    "revenue_per_km",
+    "demand_forecast"
+  ],
+  "activePageName": "surge_heat_map"
+}

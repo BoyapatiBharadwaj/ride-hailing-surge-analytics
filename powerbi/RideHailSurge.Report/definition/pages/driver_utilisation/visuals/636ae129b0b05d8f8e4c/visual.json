@@ -1,0 +1,60 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.9.0/schema.json",
+  "name": "636ae129b0b05d8f8e4c",
+  "position": {
+    "x": 540,
+    "y": 70,
+    "z": 2000,
+    "height": 150,
+    "width": 230,
+    "tabOrder": 2000
+  },
+  "visual": {
+    "visualType": "cardVisual",
+    "query": {
+      "queryState": {
+        "Data": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "driver_daily_utilisation"
+                    }
+                  },
+                  "Property": "Active Drivers"
+                }
+              },
+              "queryRef": "driver_daily_utilisation.Active Drivers",
+              "nativeQueryRef": "Active Drivers"
+            }
+          ]
+        }
+      }
+    },
+    "drillFilterOtherVisuals": true,
+    "visualContainerObjects": {
+      "title": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Active drivers'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

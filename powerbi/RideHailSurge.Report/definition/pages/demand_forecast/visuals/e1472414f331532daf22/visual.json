@@ -1,0 +1,93 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.9.0/schema.json",
+  "name": "e1472414f331532daf22",
+  "position": {
+    "x": 20,
+    "y": 200,
+    "z": 4000,
+    "height": 260,
+    "width": 1240,
+    "tabOrder": 4000
+  },
+  "visual": {
+    "visualType": "lineChart",
+    "query": {
+      "queryState": {
+        "Category": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "demand_forecast"
+                    }
+                  },
+                  "Property": "forecast_ts"
+                }
+              },
+              "queryRef": "demand_forecast.forecast_ts",
+              "nativeQueryRef": "forecast_ts",
+              "active": true
+            }
+          ]
+        },
+        "Y": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "demand_forecast"
+                    }
+                  },
+                  "Property": "Holdout Predicted"
+                }
+              },
+              "queryRef": "demand_forecast.Holdout Predicted",
+              "nativeQueryRef": "Holdout Predicted"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "demand_forecast"
+                    }
+                  },
+                  "Property": "Holdout Actual"
+                }
+              },
+              "queryRef": "demand_forecast.Holdout Actual",
+              "nativeQueryRef": "Holdout Actual"
+            }
+          ]
+        }
+      }
+    },
+    "drillFilterOtherVisuals": true,
+    "visualContainerObjects": {
+      "title": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Forecast vs actual (held-out period)'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

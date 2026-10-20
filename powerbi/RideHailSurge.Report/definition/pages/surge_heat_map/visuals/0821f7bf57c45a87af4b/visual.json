@@ -1,0 +1,60 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.9.0/schema.json",
+  "name": "0821f7bf57c45a87af4b",
+  "position": {
+    "x": 800,
+    "y": 70,
+    "z": 2000,
+    "height": 110,
+    "width": 225,
+    "tabOrder": 2000
+  },
+  "visual": {
+    "visualType": "cardVisual",
+    "query": {
+      "queryState": {
+        "Data": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "zone_minute_surge"
+                    }
+                  },
+                  "Property": "Current Surge"
+                }
+              },
+              "queryRef": "zone_minute_surge.Current Surge",
+              "nativeQueryRef": "Current Surge"
+            }
+          ]
+        }
+      }
+    },
+    "drillFilterOtherVisuals": true,
+    "visualContainerObjects": {
+      "title": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Avg surge now'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

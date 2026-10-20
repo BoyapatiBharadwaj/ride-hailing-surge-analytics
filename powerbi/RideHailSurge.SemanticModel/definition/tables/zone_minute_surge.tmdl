@@ -1,0 +1,138 @@
+table zone_minute_surge
+	lineageTag: 614b59f6-04f4-5736-8611-d11224e5f5bf
+
+	measure 'Current Surge' =
+			VAR lastMinute = CALCULATE ( MAX ( zone_minute_surge[minute_ts] ), ALL ( zone_minute_surge ) )
+			RETURN CALCULATE ( AVERAGE ( zone_minute_surge[multiplier] ), zone_minute_surge[minute_ts] = lastMinute )
+		formatString: 0.00x
+		lineageTag: b6bc7bf3-0f63-5e3b-8e6f-f92b4b883928
+
+	measure 'Current Demand/Supply Ratio' =
+			VAR lastMinute = CALCULATE ( MAX ( zone_minute_surge[minute_ts] ), ALL ( zone_minute_surge ) )
+			RETURN CALCULATE ( AVERAGE ( zone_minute_surge[ratio] ), zone_minute_surge[minute_ts] = lastMinute )
+		formatString: 0.00
+		lineageTag: 601b33f1-529e-5d97-ac4f-6cd9dfc46ba1
+
+	measure 'Surging Zones Now' =
+			VAR lastMinute = CALCULATE ( MAX ( zone_minute_surge[minute_ts] ), ALL ( zone_minute_surge ) )
+			RETURN CALCULATE ( DISTINCTCOUNT ( zone_minute_surge[zone_id] ), zone_minute_surge[minute_ts] = lastMinute, zone_minute_surge[multiplier] > 1 )
+		formatString: 0
+		lineageTag: 180bf142-afc5-5d70-a6ce-6a0492755c56
+
+	measure 'Max Surge' = MAX ( zone_minute_surge[multiplier] )
+		formatString: 0.00x
+		lineageTag: b455aabc-9db9-52ce-baa6-c3fbfa941915
+
+	measure 'Max Surge Today' =
+			MAXX (
+			    FILTER ( zone_minute_surge, INT ( zone_minute_surge[minute_ts] ) = INT ( MAX ( zone_minute_surge[minute_ts] ) ) ),
+			    zone_minute_surge[multiplier]
+			)
+		formatString: 0.00x
+		lineageTag: 4dcde75e-cfab-5939-b2fa-75a52145589a
+
+	measure 'Last Surge Refresh' = MAX ( zone_minute_surge[updated_at] )
+		formatString: General Date
+		lineageTag: d3e27bf5-3046-5012-8c62-4dd3e9254d6e
+
+	column zone_id
+		dataType: int64
+		formatString: 0
+		lineageTag: 53e60769-278e-5bf8-8805-49be7b372dc2
+		summarizeBy: none
+		sourceColumn: zone_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column minute_ts
+		dataType: dateTime
+		formatString: General Date
+		lineageTag: c81ab454-d40f-5a69-b5fd-81d1d5f9e948
+		summarizeBy: none
+		sourceColumn: minute_ts
+
+		annotation SummarizationSetBy = Automatic
+
+	column demand
+		dataType: double
+		formatString: #,0.00
+		lineageTag: 372b2b9f-5c49-55fa-9d5e-d6399dcad244
+		summarizeBy: sum
+		sourceColumn: demand
+
+		annotation SummarizationSetBy = Automatic
+
+	column supply
+		dataType: double
+		formatString: #,0.00
+		lineageTag: 14af3970-3107-5774-8be3-a92118abaadf
+		summarizeBy: sum
+		sourceColumn: supply
+
+		annotation SummarizationSetBy = Automatic
+
+	column ratio
+		dataType: double
+		formatString: #,0.00
+		lineageTag: 26aa4db5-d604-5f1e-b373-c44a07b13a7e
+		summarizeBy: sum
+		sourceColumn: ratio
+
+		annotation SummarizationSetBy = Automatic
+
+	column multiplier
+		dataType: double
+		formatString: #,0.00
+		lineageTag: 6b7865f2-4e35-5a59-a296-f006360295ba
+		summarizeBy: sum
+		sourceColumn: multiplier
+
+		annotation SummarizationSetBy = Automatic
+
+	column rain_mm
+		dataType: double
+		formatString: #,0.00
+		lineageTag: 91be4f3e-86fb-5c13-9762-bca245303863
+		summarizeBy: sum
+		sourceColumn: rain_mm
+
+		annotation SummarizationSetBy = Automatic
+
+	column temp_c
+		dataType: double
+		formatString: #,0.00
+		lineageTag: 3ec42b98-91af-5e98-bcc9-21c40af7b841
+		summarizeBy: sum
+		sourceColumn: temp_c
+
+		annotation SummarizationSetBy = Automatic
+
+	column updated_at
+		dataType: dateTime
+		formatString: General Date
+		lineageTag: 648d1bed-770a-5a0b-a0b9-a8a644fc40c2
+		summarizeBy: none
+		sourceColumn: updated_at
+
+		annotation SummarizationSetBy = Automatic
+
+	column decayed
+		dataType: boolean
+		lineageTag: 0f847fdd-3aeb-5361-90d3-258720291f27
+		summarizeBy: none
+		sourceColumn: decayed
+
+		annotation SummarizationSetBy = Automatic
+
+	partition zone_minute_surge = m
+		mode: import
+		source =
+				let
+				    Source =
+				        Databricks.Catalogs(DatabricksHost, DatabricksHttpPath, [Catalog=null, Database=null, EnableAutomaticProxyDiscovery=null]){[Name=DatabricksCatalog, Kind="Database"]}[Data]{[Name=DatabricksSchema, Kind="Schema"]}[Data]{[Name="zone_minute_surge", Kind="Table"]}[Data],
+				    Selected = Table.SelectColumns(Source, {"zone_id", "minute_ts", "demand", "supply", "ratio", "multiplier", "rain_mm", "temp_c", "updated_at", "decayed"}, MissingField.UseNull),
+				    Typed = Table.TransformColumnTypes(Selected, {{"zone_id", Int64.Type}, {"minute_ts", type datetime}, {"demand", type number}, {"supply", type number}, {"ratio", type number}, {"multiplier", type number}, {"rain_mm", type number}, {"temp_c", type number}, {"updated_at", type datetime}, {"decayed", type logical}}, "en-US")
+				in
+				    Typed
+
+	annotation PBI_ResultType = Table
